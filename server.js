@@ -159,6 +159,8 @@ function safeEqual(a, b) {
 function createApp(db) {
   const app = express();
   app.disable('x-powered-by');
+  app.set('trust proxy', 1);
+  app.get('/healthz', (req, res) => res.send('ok'));
   app.use(express.json({ limit: '200kb' }));
   app.use((req, res, next) => {
     res.set('X-Content-Type-Options', 'nosniff');

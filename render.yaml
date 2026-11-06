@@ -1,0 +1,23 @@
+# Blueprint Render: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: borang-bayaran-partime
+    runtime: node
+    plan: starter            # cakera kekal memerlukan pelan berbayar
+    region: singapore
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DB_PATH
+        value: /var/data/bayaran.db
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false          # Render akan minta anda isi semasa setup
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
