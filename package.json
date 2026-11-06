@@ -1,0 +1,15 @@
+{
+  "name": "borang-bayaran-partime",
+  "version": "1.0.0",
+  "description": "Sistem borang tuntutan bayaran pekerja separuh masa (part-time)",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node --no-warnings server.js",
+    "test": "node --no-warnings --test test/*.test.js"
+  },
+  "engines": { "node": ">=22.5" },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

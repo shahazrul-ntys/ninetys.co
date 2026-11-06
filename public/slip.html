@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Baucar Bayaran</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #fff; }
+    .voucher { max-width: 800px; margin: 24px auto; padding: 32px; border: 1px solid var(--border); }
+    .voucher header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid var(--text); padding-bottom: 12px; margin-bottom: 18px; }
+    .voucher h1 { font-size: 1.3rem; }
+    .sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; font-size: .85rem; }
+    .sign div { border-top: 1px solid var(--text); padding-top: 6px; }
+    .noprint { text-align: center; margin: 16px; }
+    @media print {
+      .noprint { display: none; }
+      .voucher { border: none; margin: 0; padding: 0; }
+      @page { size: A4; margin: 16mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="noprint"><button class="primary" onclick="print()">🖨 Cetak</button></div>
+  <div id="v" class="voucher"><p>Memuatkan…</p></div>
+  <script src="common.js"></script>
+  <script>
+    (async () => {
+      const id = new URLSearchParams(location.search).get('id');
+      const v = document.getElementById('v');
+      try {
+        const [s, c] = await Promise.all([api('/api/tetapan'), api('/api/admin/tuntutan/' + encodeURIComponent(id))]);
+        document.title = 'Baucar ' + c.no_rujukan;
+        v.innerHTML = `
+          <header>
+            <div><h1>${esc(s.nama_syarikat)}</h1><div class="hint">Baucar Bayaran Pekerja Part-Time</div></div>
+            <div style="text-align:right"><strong>${esc(c.no_rujukan)}</strong><br>${badge(c.status)}</div>
+          </header>
+          <dl class="kv">
+            <dt>Dibayar kepada</dt><dd><strong>${esc(c.nama)}</strong> (IC: ${esc(c.no_ic)})</dd>
+            <dt>Jawatan</dt><dd>${esc(c.jawatan)}${c.jabatan ? ' · ' + esc(c.jabatan) : ''}</dd>
+            <dt>Akaun bank</dt><dd>${esc(c.bank)} · ${esc(c.no_akaun)} (${esc(c.nama_pemegang)})</dd>
+            <dt>Tempoh kerja</dt><dd>${fmtDate(c.tempoh_mula)} – ${fmtDate(c.tempoh_tamat)}</dd>
+            ${c.tarikh_bayar ? `<dt>Tarikh bayaran</dt><dd>${fmtDate(c.tarikh_bayar)}</dd><dt>Rujukan transaksi</dt><dd>${esc(c.rujukan_bayaran)}</dd>` : ''}
+          </dl>
+          <table>
+            <thead><tr><th>Tarikh</th><th>Masa</th><th class="num">Rehat</th><th>Tugas</th><th class="num">Jam</th></tr></thead>
+            <tbody>${c.kehadiran.map((r) => `<tr><td>${fmtDate(r.tarikh)}</td><td>${esc(r.masa_mula)} – ${esc(r.masa_tamat)}</td>
+              <td class="num">${r.rehat_minit}m</td><td>${esc(r.tugas || '')}</td><td class="num">${Number(r.jam).toFixed(2)}</td></tr>`).join('')}</tbody>
+          </table>
+          <div class="totals" style="margin-top:16px">
+            <div>Jumlah jam</div><div>${Number(c.jumlah_jam).toFixed(2)}</div>
+            <div>Kadar sejam</div><div>${RM(c.kadar_sejam)}</div>
+            <div>Gaji kasar</div><div>${RM(c.gaji_kasar)}</div>
+            <div>Elaun</div><div>${RM(c.elaun)}</div>
+            <div>Potongan</div><div>− ${RM(c.potongan)}</div>
+            <div class="grand">Jumlah dibayar</div><div class="grand">${RM(c.jumlah_bersih)}</div>
+          </div>
+          <div class="sign">
+            <div>Disediakan oleh</div><div>Diluluskan oleh</div><div>Penerima<br>${esc(c.nama)}</div>
+          </div>`;
+      } catch (x) {
+        v.innerHTML = `<div class="alert err">${esc(x.status === 401 ? 'Sila log masuk sebagai pentadbir terlebih dahulu.' : x.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

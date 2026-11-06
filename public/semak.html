@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semak Status Tuntutan</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span data-company>Ninetys</span> · Bayaran Part-Time</div>
+    <nav>
+      <a href="/">Borang Tuntutan</a>
+      <a href="semak.html" class="active">Semak Status</a>
+      <a href="admin.html">Pentadbir</a>
+    </nav>
+  </header>
+  <main style="max-width:620px">
+    <h1>Semak Status Tuntutan</h1>
+    <p class="lead">Masukkan no. rujukan dan 4 digit terakhir No. Kad Pengenalan anda.</p>
+    <form id="f" class="card">
+      <div class="grid">
+        <div><label for="rujukan">No. rujukan</label><input id="rujukan" required placeholder="PT-202611-0001"></div>
+        <div><label for="ic4">4 digit akhir IC</label><input id="ic4" required inputmode="numeric" maxlength="4" pattern="\d{4}"></div>
+      </div>
+      <div class="actions"><button class="primary">Semak</button></div>
+    </form>
+    <div id="err" class="alert err hidden"></div>
+    <div id="out" class="card hidden"></div>
+  </main>
+  <script src="common.js"></script>
+  <script>
+    const p = new URLSearchParams(location.search);
+    if (p.get('rujukan')) document.getElementById('rujukan').value = p.get('rujukan');
+    loadSettings();
+    document.getElementById('f').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = document.getElementById('err'), out = document.getElementById('out');
+      err.classList.add('hidden'); out.classList.add('hidden');
+      const q = new URLSearchParams({ rujukan: document.getElementById('rujukan').value.trim(), ic4: document.getElementById('ic4').value.trim() });
+      try {
+        const c = await api('/api/semak?' + q);
+        out.innerHTML = `
+          <h2>${esc(c.no_rujukan)} ${badge(c.status)}</h2>
+          <dl class="kv">
+            <dt>Nama</dt><dd>${esc(c.nama)}</dd>
+            <dt>Tempoh</dt><dd>${fmtDate(c.tempoh_mula)} – ${fmtDate(c.tempoh_tamat)}</dd>
+            <dt>Jumlah jam</dt><dd>${Number(c.jumlah_jam).toFixed(2)}</dd>
+            <dt>Jumlah bersih</dt><dd><strong>${RM(c.jumlah_bersih)}</strong></dd>
+            <dt>Dihantar pada</dt><dd>${esc(c.dihantar_pada)}</dd>
+            ${c.ulasan_admin ? `<dt>Ulasan</dt><dd>${esc(c.ulasan_admin)}</dd>` : ''}
+            ${c.tarikh_bayar ? `<dt>Tarikh dibayar</dt><dd>${fmtDate(c.tarikh_bayar)}</dd><dt>Rujukan bayaran</dt><dd>${esc(c.rujukan_bayaran)}</dd>` : ''}
+          </dl>`;
+        out.classList.remove('hidden');
+      } catch (x) {
+        err.textContent = x.message; err.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

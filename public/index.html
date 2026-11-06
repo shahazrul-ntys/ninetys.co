@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Borang Tuntutan Bayaran Part-Time</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span data-company>Ninetys</span> · Bayaran Part-Time</div>
+    <nav>
+      <a href="/" class="active">Borang Tuntutan</a>
+      <a href="semak.html">Semak Status</a>
+      <a href="admin.html">Pentadbir</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Borang Tuntutan Bayaran Pekerja Part-Time</h1>
+    <p class="lead">Isi butiran diri, akaun bank dan rekod jam kerja anda. Jumlah bayaran dikira secara automatik.</p>
+
+    <div id="success" class="alert ok hidden"></div>
+    <div id="errors" class="alert err hidden"></div>
+
+    <form id="form" novalidate>
+      <section class="card">
+        <h2><span class="step">1</span>Maklumat Pekerja</h2>
+        <div class="grid">
+          <div class="full">
+            <label for="nama">Nama penuh (seperti dalam IC) <span class="req">*</span></label>
+            <input id="nama" name="nama" required autocomplete="name">
+          </div>
+          <div>
+            <label for="no_ic">No. Kad Pengenalan <span class="req">*</span></label>
+            <input id="no_ic" name="no_ic" required inputmode="numeric" placeholder="900101011234" maxlength="14">
+            <div class="hint">12 digit, tanpa sengkang.</div>
+          </div>
+          <div>
+            <label for="telefon">No. telefon <span class="req">*</span></label>
+            <input id="telefon" name="telefon" required inputmode="tel" placeholder="0123456789" autocomplete="tel">
+          </div>
+          <div>
+            <label for="emel">Emel</label>
+            <input id="emel" name="emel" type="email" autocomplete="email">
+          </div>
+          <div>
+            <label for="jawatan">Jawatan / tugas <span class="req">*</span></label>
+            <input id="jawatan" name="jawatan" required placeholder="cth. Pembantu Kedai">
+          </div>
+          <div>
+            <label for="jabatan">Jabatan / cawangan</label>
+            <input id="jabatan" name="jabatan">
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="step">2</span>Maklumat Bank</h2>
+        <div class="grid">
+          <div>
+            <label for="bank">Nama bank <span class="req">*</span></label>
+            <select id="bank" name="bank" required>
+              <option value="">— Pilih bank —</option>
+              <option>Maybank</option><option>CIMB Bank</option><option>Public Bank</option>
+              <option>RHB Bank</option><option>Hong Leong Bank</option><option>AmBank</option>
+              <option>Bank Islam</option><option>Bank Rakyat</option><option>BSN</option>
+              <option>Affin Bank</option><option>Alliance Bank</option><option>Bank Muamalat</option>
+              <option>OCBC Bank</option><option>UOB</option><option>HSBC</option>
+              <option>Standard Chartered</option><option>Agrobank</option><option>Lain-lain</option>
+            </select>
+          </div>
+          <div>
+            <label for="no_akaun">No. akaun bank <span class="req">*</span></label>
+            <input id="no_akaun" name="no_akaun" required inputmode="numeric">
+          </div>
+          <div class="full">
+            <label for="nama_pemegang">Nama pemegang akaun</label>
+            <input id="nama_pemegang" name="nama_pemegang">
+            <div class="hint">Biarkan kosong jika sama dengan nama penuh.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="step">3</span>Rekod Kehadiran &amp; Jam Kerja</h2>
+        <div class="grid">
+          <div>
+            <label for="tempoh_mula">Tempoh tuntutan dari <span class="req">*</span></label>
+            <input id="tempoh_mula" name="tempoh_mula" type="date" required>
+          </div>
+          <div>
+            <label for="tempoh_tamat">Hingga <span class="req">*</span></label>
+            <input id="tempoh_tamat" name="tempoh_tamat" type="date" required>
+          </div>
+        </div>
+
+        <div class="table-wrap" style="margin-top:16px">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Tarikh</th><th>Masuk</th><th>Keluar</th><th>Rehat (minit)</th>
+                <th>Tugas</th><th class="num">Jam</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="toolbar" style="margin-top:10px">
+          <button type="button" id="addRow">+ Tambah hari</button>
+          <button type="button" id="copyRow" title="Salin baris terakhir ke hari seterusnya">Salin ke hari seterusnya</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="step">4</span>Pengiraan Bayaran</h2>
+        <div class="grid">
+          <div>
+            <label for="kadar_sejam">Kadar sejam (RM) <span class="req">*</span></label>
+            <input id="kadar_sejam" name="kadar_sejam" type="number" min="0.01" step="0.01" required>
+            <div class="hint">Mengikut kadar yang dipersetujui dengan majikan.</div>
+          </div>
+          <div>
+            <label for="elaun">Elaun / tambahan (RM)</label>
+            <input id="elaun" name="elaun" type="number" min="0" step="0.01" value="0">
+            <div class="hint">cth. elaun pengangkutan, makan.</div>
+          </div>
+          <div>
+            <label for="potongan">Potongan (RM)</label>
+            <input id="potongan" name="potongan" type="number" min="0" step="0.01" value="0">
+            <div class="hint">cth. pendahuluan gaji.</div>
+          </div>
+          <div class="full">
+            <label for="catatan">Catatan</label>
+            <textarea id="catatan" name="catatan"></textarea>
+          </div>
+        </div>
+
+        <div class="totals" style="margin-top:18px">
+          <div>Jumlah jam</div><div id="t_jam">0.00</div>
+          <div>Gaji kasar</div><div id="t_kasar">RM 0.00</div>
+          <div>Elaun</div><div id="t_elaun">RM 0.00</div>
+          <div>Potongan</div><div id="t_potongan">− RM 0.00</div>
+          <div class="grand">Jumlah bersih</div><div class="grand" id="t_bersih">RM 0.00</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <label class="check">
+          <input type="checkbox" id="pengakuan" name="pengakuan" required>
+          <span>Saya mengaku bahawa maklumat yang diberikan adalah benar dan jam kerja yang dituntut adalah tepat. Saya faham tuntutan palsu boleh menyebabkan tindakan diambil.</span>
+        </label>
+        <div class="actions" style="margin-top:16px">
+          <button type="submit" class="primary" id="submitBtn">Hantar Tuntutan</button>
+          <button type="reset">Kosongkan</button>
+        </div>
+      </section>
+    </form>
+  </main>
+  <footer class="foot">Sistem Borang Bayaran Part-Time</footer>
+
+  <script src="common.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const tbody = $('rows');
+    const form = $('form');
+
+    function minutes(a, b) {
+      if (!/^\d{2}:\d{2}$/.test(a) || !/^\d{2}:\d{2}$/.test(b)) return null;
+      const [ah, am] = a.split(':').map(Number);
+      const [bh, bm] = b.split(':').map(Number);
+      let s = ah * 60 + am, e = bh * 60 + bm;
+      if (e <= s) e += 1440;
+      return e - s;
+    }
+
+    function addRow(data = {}) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="idx"></td>
+        <td><input type="date" class="tarikh" required></td>
+        <td><input type="time" class="masa_mula" required></td>
+        <td><input type="time" class="masa_tamat" required></td>
+        <td><input type="number" class="rehat_minit" min="0" step="5" value="0" style="max-width:90px"></td>
+        <td><input class="tugas" placeholder="Pilihan"></td>
+        <td class="num jam">0.00</td>
+        <td><button type="button" class="small danger del" aria-label="Buang baris">✕</button></td>`;
+      for (const k of ['tarikh', 'masa_mula', 'masa_tamat', 'rehat_minit', 'tugas']) {
+        if (data[k] != null) tr.querySelector('.' + k).value = data[k];
+      }
+      const tm = $('tempoh_mula').value, tt = $('tempoh_tamat').value;
+      if (tm) tr.querySelector('.tarikh').min = tm;
+      if (tt) tr.querySelector('.tarikh').max = tt;
+      tbody.appendChild(tr);
+      renumber();
+      recalc();
+      return tr;
+    }
+
+    function renumber() {
+      [...tbody.rows].forEach((tr, i) => { tr.querySelector('.idx').textContent = i + 1; });
+    }
+
+    function readRows() {
+      return [...tbody.rows].map((tr) => ({
+        tarikh: tr.querySelector('.tarikh').value,
+        masa_mula: tr.querySelector('.masa_mula').value,
+        masa_tamat: tr.querySelector('.masa_tamat').value,
+        rehat_minit: tr.querySelector('.rehat_minit').value,
+        tugas: tr.querySelector('.tugas').value,
+      }));
+    }
+
+    function recalc() {
+      let total = 0;
+      [...tbody.rows].forEach((tr) => {
+        const m = minutes(tr.querySelector('.masa_mula').value, tr.querySelector('.masa_tamat').value);
+        const r = Number(tr.querySelector('.rehat_minit').value) || 0;
+        const jam = m == null ? 0 : Math.max(0, (m - r) / 60);
+        tr.querySelector('.jam').textContent = jam.toFixed(2);
+        total += Math.round(jam * 100) / 100;
+      });
+      const kadar = Number($('kadar_sejam').value) || 0;
+      const elaun = Number($('elaun').value) || 0;
+      const potongan = Number($('potongan').value) || 0;
+      const kasar = Math.round(total * kadar * 100) / 100;
+      $('t_jam').textContent = total.toFixed(2);
+      $('t_kasar').textContent = RM(kasar);
+      $('t_elaun').textContent = RM(elaun);
+      $('t_potongan').textContent = '− ' + RM(potongan);
+      $('t_bersih').textContent = RM(kasar + elaun - potongan);
+    }
+
+    tbody.addEventListener('input', recalc);
+    tbody.addEventListener('click', (e) => {
+      if (e.target.closest('.del')) {
+        e.target.closest('tr').remove();
+        if (!tbody.rows.length) addRow();
+        renumber(); recalc();
+      }
+    });
+    ['kadar_sejam', 'elaun', 'potongan'].forEach((id) => $(id).addEventListener('input', recalc));
+    ['tempoh_mula', 'tempoh_tamat'].forEach((id) => $(id).addEventListener('change', () => {
+      tbody.querySelectorAll('.tarikh').forEach((el) => {
+        el.min = $('tempoh_mula').value; el.max = $('tempoh_tamat').value;
+      });
+    }));
+
+    $('addRow').addEventListener('click', () => addRow());
+    $('copyRow').addEventListener('click', () => {
+      const rows = readRows();
+      const last = rows[rows.length - 1] || {};
+      let next = '';
+      if (last.tarikh) {
+        const d = new Date(last.tarikh + 'T00:00:00');
+        d.setDate(d.getDate() + 1);
+        next = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      }
+      addRow({ ...last, tarikh: next });
+    });
+
+    form.addEventListener('reset', () => {
+      setTimeout(() => { tbody.innerHTML = ''; addRow(); $('kadar_sejam').value = window.__kadar || ''; recalc(); });
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      $('errors').classList.add('hidden');
+      $('success').classList.add('hidden');
+      const fd = new FormData(form);
+      const body = Object.fromEntries(fd.entries());
+      body.pengakuan = $('pengakuan').checked;
+      body.kehadiran = readRows();
+      $('submitBtn').disabled = true;
+      try {
+        const r = await api('/api/tuntutan', { method: 'POST', body });
+        $('success').innerHTML = `<strong>Tuntutan berjaya dihantar.</strong><br>
+          No. rujukan anda: <strong>${esc(r.no_rujukan)}</strong> — jumlah bersih ${RM(r.jumlah_bersih)}.<br>
+          Simpan nombor ini untuk <a href="semak.html?rujukan=${encodeURIComponent(r.no_rujukan)}">menyemak status</a>.`;
+        $('success').classList.remove('hidden');
+        form.reset();
+      } catch (err) {
+        const list = (err.data && err.data.errors) || [err.message];
+        $('errors').innerHTML = `<strong>Sila betulkan perkara berikut:</strong><ul>${list.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+        $('errors').classList.remove('hidden');
+      } finally {
+        $('submitBtn').disabled = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+
+    loadSettings().then((s) => {
+      window.__kadar = s.kadar_lalai;
+      $('kadar_sejam').value = s.kadar_lalai;
+      recalc();
+    });
+    addRow();
+  </script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pentadbir Bayaran Part-Time</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span data-company>Ninetys</span> · Pentadbir</div>
+    <nav>
+      <a href="/">Borang Tuntutan</a>
+      <a href="admin.html" class="active">Pentadbir</a>
+      <a href="#" id="logout" class="hidden">Log keluar</a>
+    </nav>
+  </header>
+
+  <!-- Log masuk -->
+  <section id="loginView" class="card login hidden">
+    <h2>Log Masuk Pentadbir</h2>
+    <form id="loginForm">
+      <label for="pw">Kata laluan</label>
+      <input id="pw" type="password" required autocomplete="current-password">
+      <div id="loginErr" class="alert err hidden" style="margin-top:12px"></div>
+      <div class="actions"><button class="primary">Log masuk</button></div>
+    </form>
+  </section>
+
+  <!-- Papan pemuka -->
+  <main id="appView" class="hidden" style="max-width:1180px">
+    <h1>Senarai Tuntutan</h1>
+    <p class="lead">Semak, lulus, tolak dan rekod pembayaran tuntutan pekerja part-time.</p>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="card">
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="Cari nama, no. rujukan, IC…">
+        <select id="statusFilter" style="max-width:180px">
+          <option value="">Semua status</option>
+          <option value="DIHANTAR">Dihantar</option>
+          <option value="DILULUSKAN">Diluluskan</option>
+          <option value="DITOLAK">Ditolak</option>
+          <option value="DIBAYAR">Dibayar</option>
+        </select>
+        <span style="flex:1"></span>
+        <a class="btn" id="exportBtn" href="/api/admin/eksport.csv">⬇ Eksport CSV</a>
+        <button type="button" id="settingsBtn">⚙ Tetapan</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>No. Rujukan</th><th>Nama</th><th>Jawatan</th><th>Tempoh</th>
+              <th class="num">Jam</th><th class="num">Jumlah Bersih</th><th>Status</th><th>Dihantar</th><th></th></tr>
+          </thead>
+          <tbody id="list"></tbody>
+        </table>
+      </div>
+      <p id="empty" class="lead hidden" style="text-align:center;margin:20px 0 4px">Tiada tuntutan dijumpai.</p>
+    </div>
+  </main>
+
+  <!-- Butiran tuntutan -->
+  <dialog id="detail">
+    <div class="dlg-head"><strong id="dTitle"></strong><button class="small" data-close>Tutup</button></div>
+    <div class="dlg-body" id="dBody"></div>
+  </dialog>
+
+  <!-- Tetapan -->
+  <dialog id="settings">
+    <div class="dlg-head"><strong>Tetapan</strong><button class="small" data-close>Tutup</button></div>
+    <form class="dlg-body" id="settingsForm">
+      <div class="grid">
+        <div class="full"><label for="s_nama">Nama syarikat / organisasi</label><input id="s_nama" required></div>
+        <div><label for="s_kadar">Kadar sejam lalai (RM)</label><input id="s_kadar" type="number" min="0.01" step="0.01" required></div>
+      </div>
+      <div id="sErr" class="alert err hidden" style="margin-top:12px"></div>
+      <div class="actions"><button class="primary">Simpan</button></div>
+    </form>
+  </dialog>
+
+  <script src="common.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let currentStatus = '';
+    let searchTimer;
+
+    async function init() {
+      loadSettings();
+      try { await api('/api/admin/me'); showApp(); } catch { showLogin(); }
+    }
+    function showLogin() { $('loginView').classList.remove('hidden'); $('appView').classList.add('hidden'); $('logout').classList.add('hidden'); }
+    function showApp() { $('loginView').classList.add('hidden'); $('appView').classList.remove('hidden'); $('logout').classList.remove('hidden'); refresh(); }
+
+    $('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      $('loginErr').classList.add('hidden');
+      try { await api('/api/admin/login', { method: 'POST', body: { password: $('pw').value } }); $('pw').value = ''; showApp(); }
+      catch (x) { $('loginErr').textContent = x.message; $('loginErr').classList.remove('hidden'); }
+    });
+    $('logout').addEventListener('click', async (e) => { e.preventDefault(); await api('/api/admin/logout', { method: 'POST' }); showLogin(); });
+
+    async function refresh() {
+      const q = new URLSearchParams();
+      if (currentStatus) q.set('status', currentStatus);
+      if ($('q').value.trim()) q.set('q', $('q').value.trim());
+      let data;
+      try { data = await api('/api/admin/tuntutan?' + q); }
+      catch (x) { if (x.status === 401) return showLogin(); throw x; }
+
+      $('stats').innerHTML = Object.entries(data.ringkasan).map(([k, v]) => `
+        <div class="stat ${currentStatus === k ? 'sel' : ''}" data-status="${k}">
+          <div class="k">${STATUS_LABEL[k]}</div><div class="v">${v.bil}</div><div class="s">${RM(v.jumlah)}</div>
+        </div>`).join('');
+
+      $('list').innerHTML = data.items.map((c) => `
+        <tr>
+          <td><strong>${esc(c.no_rujukan)}</strong></td>
+          <td>${esc(c.nama)}</td>
+          <td>${esc(c.jawatan)}</td>
+          <td style="white-space:nowrap">${fmtDate(c.tempoh_mula)} – ${fmtDate(c.tempoh_tamat)}</td>
+          <td class="num">${Number(c.jumlah_jam).toFixed(2)}</td>
+          <td class="num"><strong>${RM(c.jumlah_bersih)}</strong></td>
+          <td>${badge(c.status)}</td>
+          <td style="white-space:nowrap">${esc(c.dihantar_pada.slice(0, 16))}</td>
+          <td><button class="small" data-open="${c.id}">Buka</button></td>
+        </tr>`).join('');
+      $('empty').classList.toggle('hidden', data.items.length > 0);
+      $('exportBtn').href = '/api/admin/eksport.csv' + (currentStatus ? '?status=' + currentStatus : '');
+    }
+
+    $('stats').addEventListener('click', (e) => {
+      const s = e.target.closest('.stat');
+      if (!s) return;
+      currentStatus = currentStatus === s.dataset.status ? '' : s.dataset.status;
+      $('statusFilter').value = currentStatus;
+      refresh();
+    });
+    $('statusFilter').addEventListener('change', () => { currentStatus = $('statusFilter').value; refresh(); });
+    $('q').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(refresh, 250); });
+    $('list').addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) openDetail(b.dataset.open); });
+    document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', (e) => { e.preventDefault(); b.closest('dialog').close(); }));
+
+    async function openDetail(id) {
+      const c = await api('/api/admin/tuntutan/' + id);
+      $('dTitle').innerHTML = `${esc(c.no_rujukan)} ${badge(c.status)}`;
+      const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      $('dBody').innerHTML = `
+        <dl class="kv">
+          <dt>Nama</dt><dd>${esc(c.nama)}</dd>
+          <dt>No. IC</dt><dd>${esc(c.no_ic)}</dd>
+          <dt>Telefon / Emel</dt><dd>${esc(c.telefon)}${c.emel ? ' · ' + esc(c.emel) : ''}</dd>
+          <dt>Jawatan / Jabatan</dt><dd>${esc(c.jawatan)}${c.jabatan ? ' · ' + esc(c.jabatan) : ''}</dd>
+          <dt>Bank</dt><dd>${esc(c.bank)} · ${esc(c.no_akaun)}<br><span class="hint">Pemegang: ${esc(c.nama_pemegang)}</span></dd>
+          <dt>Tempoh</dt><dd>${fmtDate(c.tempoh_mula)} – ${fmtDate(c.tempoh_tamat)}</dd>
+          ${c.catatan ? `<dt>Catatan pekerja</dt><dd>${esc(c.catatan)}</dd>` : ''}
+        </dl>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Tarikh</th><th>Masuk</th><th>Keluar</th><th class="num">Rehat</th><th>Tugas</th><th class="num">Jam</th></tr></thead>
+          <tbody>${c.kehadiran.map((r) => `<tr><td>${fmtDate(r.tarikh)}</td><td>${esc(r.masa_mula)}</td><td>${esc(r.masa_tamat)}</td>
+            <td class="num">${r.rehat_minit}m</td><td>${esc(r.tugas || '')}</td><td class="num">${Number(r.jam).toFixed(2)}</td></tr>`).join('')}</tbody>
+        </table></div>
+        <div class="totals" style="margin:14px 0 18px auto">
+          <div>Jumlah jam</div><div>${Number(c.jumlah_jam).toFixed(2)}</div>
+          <div>Kadar sejam</div><div>${RM(c.kadar_sejam)}</div>
+          <div>Gaji kasar</div><div>${RM(c.gaji_kasar)}</div>
+          <div>Elaun</div><div>${RM(c.elaun)}</div>
+          <div>Potongan</div><div>− ${RM(c.potongan)}</div>
+          <div class="grand">Jumlah bersih</div><div class="grand">${RM(c.jumlah_bersih)}</div>
+        </div>
+
+        <h3 style="font-size:.95rem;margin:0 0 6px">Sejarah</h3>
+        <ul class="timeline">${c.log.map((l) => `<li>${badge(l.status)} <span class="hint">${esc(l.pada)}</span>${l.ulasan ? ' — ' + esc(l.ulasan) : ''}</li>`).join('')}</ul>
+
+        <div id="actErr" class="alert err hidden" style="margin-top:14px"></div>
+        <div id="actions" style="margin-top:14px"></div>`;
+
+      const act = $('actions');
+      const parts = [];
+      if (c.status === 'DIHANTAR' || c.status === 'DILULUSKAN') {
+        parts.push(`<label for="ulasan">Ulasan (wajib jika menolak)</label><textarea id="ulasan"></textarea>`);
+      }
+      if (c.status === 'DILULUSKAN') {
+        parts.push(`<div class="grid" style="margin-top:10px">
+          <div><label for="tb">Tarikh bayaran</label><input id="tb" type="date" value="${today}"></div>
+          <div><label for="rb">No. rujukan transaksi</label><input id="rb" placeholder="cth. DuitNow / IBG ref"></div></div>`);
+      }
+      const btns = [];
+      if (c.status === 'DIHANTAR') btns.push(`<button class="ok" data-s="DILULUSKAN">✓ Luluskan</button>`, `<button class="danger" data-s="DITOLAK">✕ Tolak</button>`);
+      if (c.status === 'DILULUSKAN') btns.push(`<button class="ok" data-s="DIBAYAR">Tandakan Dibayar</button>`, `<button data-s="DIHANTAR">Batal kelulusan</button>`, `<button class="danger" data-s="DITOLAK">✕ Tolak</button>`);
+      if (c.status === 'DITOLAK') btns.push(`<button data-s="DIHANTAR">Buka semula</button>`);
+      btns.push(`<a class="btn" href="slip.html?id=${c.id}" target="_blank" rel="noopener">🖨 Cetak baucar</a>`);
+      act.innerHTML = parts.join('') + `<div class="actions">${btns.join('')}</div>`;
+
+      act.addEventListener('click', async (e) => {
+        const b = e.target.closest('[data-s]');
+        if (!b) return;
+        const body = { status: b.dataset.s, ulasan: $('ulasan') ? $('ulasan').value : '' };
+        if (body.status === 'DIBAYAR') { body.tarikh_bayar = $('tb').value; body.rujukan_bayaran = $('rb').value; }
+        if (body.status === 'DIBAYAR' && !confirm(`Sahkan bayaran ${RM(c.jumlah_bersih)} kepada ${c.nama}?`)) return;
+        try {
+          await api(`/api/admin/tuntutan/${c.id}/status`, { method: 'PATCH', body });
+          await refresh();
+          openDetail(c.id);
+        } catch (x) { $('actErr').textContent = x.message; $('actErr').classList.remove('hidden'); }
+      });
+
+      if (!$('detail').open) $('detail').showModal();
+    }
+
+    $('settingsBtn').addEventListener('click', async () => {
+      const s = await api('/api/tetapan');
+      $('s_nama').value = s.nama_syarikat; $('s_kadar').value = s.kadar_lalai;
+      $('sErr').classList.add('hidden');
+      $('settings').showModal();
+    });
+    $('settingsForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await api('/api/admin/tetapan', { method: 'PUT', body: { nama_syarikat: $('s_nama').value, kadar_lalai: $('s_kadar').value } });
+        $('settings').close(); loadSettings();
+      } catch (x) { $('sErr').textContent = x.message; $('sErr').classList.remove('hidden'); }
+    });
+
+    init();
+  </script>
+</body>
+</html>
